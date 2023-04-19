@@ -112,6 +112,67 @@ void exe4(){
     }
 }
 
+void exe5(){
+    int fd[2];
+    pid_t pid1 , pid2;
+    int status1, status2;
+
+    if(pipe(fd) < 0){
+        perror("Erro no pipe");
+        _exit(1);
+    }
+
+    pid1 = fork();
+    
+    if(pid1 < 0){
+        perror("Error no fork");
+        exit(1);
+    }
+    else if (pid1 == 0){
+        close(fd[0]);
+        if(dup2(fd[1], STDOUT_FILENO) == -1){
+            perror("Erro no dup2");
+            _exit(1);
+        }
+        execlp("ls", "ls","/etc", NULL);
+        perror("Erro no execlp");
+        _exit(1);
+    }
+
+    pid2 = fork();
+    if(pid2 < 0){
+        perror("Error no fork");
+        exit(1);
+    }
+    else if (pid2 == 0){
+        close(fd[1]);
+        if(dup2(fd[0], STDIN_FILENO) == -1){
+            perror("Erro no dup2");
+            _exit(1);
+        }
+        execlp("wc", "wc", "-l" ,NULL);
+        perror("Erro no execlp");
+        _exit(1);
+    }
+
+    close(fd[0]);
+    close(fd[1]);
+
+    waitpid(pid1, &status1, 0);
+    waitpid(pid2, &status2, 0);
+
+     if (WIFEXITED(status1) && WIFEXITED(status2)) {
+        printf("Os comandos /bin/ls /etc | /usr/bin/wc -l terminaram com status de saída %d e %d, respectivamente\n",
+               WEXITSTATUS(status1), WEXITSTATUS(status2));
+    } else {
+        printf("Pelo menos um dos comandos foi terminado por um sinal\n");
+    }
+}
+
+void exe6(){
+
+}
+
 int main(int argc , char *argv[]){
     char str[] = "exe1";
     if(strcmp(argv[1],str) == 0){
@@ -132,6 +193,14 @@ int main(int argc , char *argv[]){
     if(strcmp(argv[1],str4) == 0){
         exe4();
         write(terminal, "terminei\n",sizeof("terminei\n"));
+    }
+    char str5[] = "exe5";
+    if(strcmp(argv[1],str5) == 0){
+        exe5();
+    }
+    char str6[] = "exe6";
+    if(strcmp(argv[1],str6) == 0){
+        exe6();
     }
     return 0;
 }
