@@ -170,7 +170,81 @@ void exe5(){
 }
 
 void exe6(){
+    int fd[2];
+  pid_t pid1, pid2, pid3, pid4;
 
+  // Criando o pipe
+  if (pipe(fd) == -1) {
+    perror("Erro ao criar o pipe");
+    exit(EXIT_FAILURE);
+  }
+
+  // Executando o comando grep -v ^# /etc/passwd
+  pid1 = fork();
+  if (pid1 == -1) {
+    perror("Erro ao criar processo filho");
+    exit(EXIT_FAILURE);
+  } else if (pid1 == 0) {
+    // Filho 1
+    dup2(fd[1], STDOUT_FILENO); // Redirecionando a saída padrão para o pipe
+    close(fd[0]); // Fechando o descritor de leitura do pipe
+    execlp("grep", "grep", "-v", "^#", "/etc/passwd", NULL); // Executando o comando grep
+    perror("Erro ao executar o comando grep");
+    exit(EXIT_FAILURE);
+  }
+
+  // Executando o comando cut -f7 -d:
+  pid2 = fork();
+  if (pid2 == -1) {
+    perror("Erro ao criar processo filho");
+    exit(EXIT_FAILURE);
+  } else if (pid2 == 0) {
+    // Filho 2
+    dup2(fd[0], STDIN_FILENO); // Redirecionando a entrada padrão para o pipe
+    close(fd[1]); // Fechando o descritor de escrita do pipe
+    execlp("cut", "cut", "-f7", "-d:", NULL); // Executando o comando cut
+    perror("Erro ao executar o comando cut");
+    exit(EXIT_FAILURE);
+  }
+
+  // Executando o comando uniq
+  pid3 = fork();
+  if (pid3 == -1) {
+    perror("Erro ao criar processo filho");
+    exit(EXIT_FAILURE);
+  } else if (pid3 == 0) {
+    // Filho 3
+    dup2(fd[0], STDIN_FILENO); // Redirecionando a entrada padrão para o pipe
+    close(fd[1]); // Fechando o descritor de escrita do pipe
+    execlp("uniq", "uniq", NULL); // Executando o comando uniq
+    perror("Erro ao executar o comando uniq");
+    exit(EXIT_FAILURE);
+  }
+
+  // Executando o comando wc -l
+  pid4 = fork();
+  if (pid4 == -1) {
+    perror("Erro ao criar processo filho");
+    exit(EXIT_FAILURE);
+  } else if (pid4 == 0) {
+    // Filho 4
+    dup2(fd[0], STDIN_FILENO); // Redirecionando a entrada padrão para o pipe
+    close(fd[1]); // Fechando o descritor de escrita do pipe
+    execlp("wc", "wc", "-l", NULL); // Executando o comando wc -l
+    perror("Erro ao executar o comando wc");
+    exit(EXIT_FAILURE);
+  }
+
+  // Fechando os descritores de arquivo do pipe no processo pai
+    close(fd[0]);
+    close(fd[1]);
+
+    // Aguardando a finalização dos processos filhos
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);
+    waitpid(pid3, NULL, 0);
+    waitpid(pid4, NULL, 0);
+    
 }
 
 int main(int argc , char *argv[]){
